@@ -16,15 +16,6 @@ library("tidyverse")
 library("readxl") 
 library("FactoMineR") # このパッケージでPCA，RDA解析ができます。 
 library("factoextra")
-library("tidyverse") # データ処理や作図に使う関数はここにある
-library("lubridate") # 時間データ処理に使う関数はここ
-library("gridExtra")
-library("gcookbook")
-library("readxl")
-library("dplyr")
-library("ggsci")
-library("nlstools")
-library("broom")
 ```
 ```{r}
 # データの読み込み
