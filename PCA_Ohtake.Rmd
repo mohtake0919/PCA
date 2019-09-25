@@ -16,12 +16,36 @@ library("tidyverse")
 library("readxl") 
 library("FactoMineR") # このパッケージでPCA，RDA解析ができます。 
 library("factoextra")
+library("tidyverse") # データ処理や作図に使う関数はここにある
+library("lubridate") # 時間データ処理に使う関数はここ
+library("gridExtra")
+library("gcookbook")
+library("readxl")
+library("dplyr")
+library("ggsci")
+library("nlstools")
+library("broom")
 ```
 ```{r}
 # データの読み込み
-d3 = read_xlsx("主成分分析_190924.xlsx", sheet = "Raw data_full year") 
+d3 = read_xlsx("主成分分析_190924.xlsx", 
+               sheet = "Raw data_full year", 
+               col_names = c("Vmax",
+                             "Km",
+                             "Vmax_Km",
+                             "P_uptake",
+                             "P_demand_max",
+                             "P_demand",
+                             "Growth_rate_max",
+                             "Growth_rate_insitu",
+                             "Total_P_contents",
+                             "PO4_conc.",
+                             "NO3_conc.",
+                             "PAR",
+                             "Temp",
+                             "WW"))
 d3 = d3 %>% drop_na() 
-
+show(d3)
 # 欠損値を外す PCAはここであてはめる。 
 d3out = PCA(d3, graph = FALSE) 
 
