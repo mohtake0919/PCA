@@ -27,8 +27,25 @@ library("broom")
 ```
 ```{r}
 # データの読み込み
-data = read_xlsx("主成分分析_190924.xlsx", sheet = "Raw data_full year") 
-d3 = data[, c(1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 13, 14)]
+data = read_xlsx("主成分分析_190924.xlsx", 
+                 sheet = "Raw data_full year",
+                 skip = 1,
+                 col_names = c("Vmax",
+                               "Km",
+                               "Vmax_Km",
+                               "P_uptake",
+                               "P_demand_max",
+                               "P_demand",
+                               "Growth_rate_max",
+                               "Growth_rate_insitu",
+                               "Total_P_contents",
+                               "PO4_conc.",
+                               "NO3_conc.",
+                               "PAR",
+                               "Temp",
+                               "WW")) 
+data
+d3 = data[, c(-5, -7)]
 d3 = d3 %>% drop_na() 
 d3
 
