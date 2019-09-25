@@ -71,7 +71,9 @@ pcacoord = pcacoord %>%
 
 # 固有値があれば，主成分がどの程度全体の分散を説明しているかがわかります。 
 eval = d3out %>% get_eig()
+```
 
+```{r}
 cap = "主成分１に対すして，相関の高い順でならべた要因です。 黒丸は貢献度が 100/14 を超えた要因です。 主成分１に貢献する要因は８つあります。"
 
 d3_x %>% filter(str_detect(Dim, "Dim.1")) %>% 
@@ -140,7 +142,9 @@ d3_x %>% filter(str_detect(Dim, "Dim.4")) %>%
         legend.position=c(1,1), 
         legend.justification=c(1,1), 
         legend.title=element_blank()) 
+```
 
+```{r}
 # 主成分分析の図に，correlationcircleを乗せるための関数です。 
 circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
   r = diameter / 2 
@@ -221,4 +225,4 @@ get_pca(d3out) %>% pluck("contrib") %>% as_tibble(rownames = "Variable") %>%
   knitr::kable(format = "latex", 
                booktabs = TRUE, digits=4, 
                linesep = "", caption=cap)
-
+```
