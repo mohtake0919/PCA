@@ -45,7 +45,7 @@ data = read_xlsx("主成分分析_190924.xlsx",
                                "Temp.",
                                "Wet Weight")) 
 data
-d3 = data[, c(-5, -7)]
+d3 = data[, c(-1, -2, -3, -5, -7, -11, -14)]
 d3 = d3 %>% drop_na() 
 d3
 
@@ -119,7 +119,7 @@ d3_x %>% filter(str_detect(Dim, "Dim.2")) %>%
   geom_point(aes(shape = C, fill = C), size = 3) + 
   geom_hline(yintercept= 0, linetype = "dashed") + 
   scale_x_discrete("") + 
-  scale_y_continuous("Dimension 1", limits = c(-1,1)) + 
+  scale_y_continuous("Dimension 2", limits = c(-1,1)) + 
   scale_shape_manual(values = c(19, 21)) + 
   scale_fill_manual(values = c("black", "white")) + 
   theme(legend.background=element_blank(), 
@@ -136,7 +136,7 @@ d3_x %>% filter(str_detect(Dim, "Dim.3")) %>%
   geom_point(aes(shape = C, fill = C), size = 3) + 
   geom_hline(yintercept= 0, linetype = "dashed") + 
   scale_x_discrete("") + 
-  scale_y_continuous("Dimension 1", limits = c(-1,1)) + 
+  scale_y_continuous("Dimension 3", limits = c(-1,1)) + 
   scale_shape_manual(values = c(19, 21)) + 
   scale_fill_manual(values = c("black", "white")) + 
   theme(legend.background=element_blank(), 
@@ -153,7 +153,7 @@ d3_x %>% filter(str_detect(Dim, "Dim.4")) %>%
   geom_point(aes(shape = C, fill = C), size = 3) + 
   geom_hline(yintercept= 0, linetype = "dashed") + 
   scale_x_discrete("") + 
-  scale_y_continuous("Dimension 1", limits = c(-1,1)) + 
+  scale_y_continuous("Dimension 4", limits = c(-1,1)) + 
   scale_shape_manual(values = c(19, 21)) + 
   scale_fill_manual(values = c("black", "white")) + 
   theme(legend.background=element_blank(), 
@@ -172,7 +172,10 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
   return(tibble(x = xx, y = yy)) 
   }
 
-cap = "The first principal component plane, ここで主成分１と２を座標軸にしています。 矢印が円に近いほど，その要因がこの面に強く貢献している。つまり，矢印の⻑さが１のとき， 円と重なり，その要因は他の主成分に貢献していない。 矢印と矢印の間の角度のcos() をとれば，そのペアの相関係数を求められます。"
+cap = "The first principal component plane, ここで主成分１と２を座標軸にしています。"
+#矢印が円に近いほど，その要因がこの面に強く貢献している。
+#つまり，矢印の長さが１のとき，円と重なり，その要因は他の主成分に貢献していない。
+#矢印と矢印の間の角度のcos() をとれば，そのペアの相関係数を求められます。"
 
 xlab = str_glue("Dim. 1 ({round(eval[1,2], 1)}%)") 
 ylab = str_glue("Dim. 2 ({round(eval[2,2], 1)}%)") 
@@ -197,7 +200,8 @@ ggplot(pcacoord) +
   scale_y_continuous(ylab, limits = c(-1.2, 1.2)) + 
   coord_equal() 
 
-cap = "The third principal component plane, ここで主成分３と４を座標軸にしています。 この面の場合，前リンだけ強く貢献しています。" 
+cap = "The third principal component plane, ここで主成分３と４を座標軸にしています。"
+#この面の場合，前リンだけ強く貢献しています。
 
 xlab = str_glue("Dim. 3 ({round(eval[3,2], 1)}%)") 
 ylab = str_glue("Dim. 4 ({round(eval[4,2], 1)}%)") 
@@ -223,25 +227,28 @@ ggplot(pcacoord) +
   coord_equal() 
 
 cap = "主成分に対する各要因の修正分負荷量 (loading)。最初の５つの主成分だけ示しています。" 
-get_pca(d3out) %>% pluck("coord") %>% as_tibble(rownames = "Variable") %>% 
+Table_1 = get_pca(d3out) %>% pluck("coord") %>% as_tibble(rownames = "Variable") %>% 
   arrange(desc(Dim.1)) %>% 
   knitr::kable(format = "latex", 
                booktabs = TRUE, digits=4, linesep = "", 
                caption=cap) 
+Table_1
+
 
 cap = "主成分に対する各要因の相関係数 (correlation)。最初の５つの主成分だけ示しています。" 
-get_pca(d3out) %>% pluck("cor") %>% as_tibble(rownames = "Variable") %>% 
+Table_2 = get_pca(d3out) %>% pluck("cor") %>% as_tibble(rownames = "Variable") %>% 
   arrange(desc(Dim.1)) %>% 
   knitr::kable(format = "latex", 
                booktabs = TRUE, digits=4, 
                linesep = "", caption=cap) 
+Table_2
 
 cap = "主成分に対する各要因の貢献度(contribution)。最初の５つの主成分だけ示しています。列の和は１００です。要因が同等に貢献している場合，貢献度"
 
-get_pca(d3out) %>% pluck("contrib") %>% as_tibble(rownames = "Variable") %>% 
+Table_3 = get_pca(d3out) %>% pluck("contrib") %>% as_tibble(rownames = "Variable") %>% 
   arrange(desc(Dim.1)) %>% 
   knitr::kable(format = "latex", 
                booktabs = TRUE, digits=4, 
                linesep = "", caption=cap)
+Table_3
 ```
-
