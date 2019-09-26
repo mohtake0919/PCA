@@ -1,0 +1,317 @@
+---
+title: "主成分分析"
+subtitle: "大竹用"
+author: "Greg Nishihara"
+date: "2019 Sep 24"
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{pdflscape}
+  - \usepackage{float}
+  - \usepackage[section]{placeins}
+  - \newcommand{\blandscape}{\begin{landscape}}
+  - \newcommand{\elandscape}{\end{landscape}}  
+output: 
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    dev: cairo_pdf
+    keep_tex: yes
+    citation_package: biblatex
+    toc: true
+    toc_depth: 3
+documentclass: bxjsarticle
+classoption: "xelatex, ja=standard, english"
+fig_crop: yes
+fig_caption: yes
+lot: no
+lof: no
+fontsize: 10pt
+geometry: a4paper
+link-citations: true
+bibliography: 
+mainfont: "Noto Serif"
+sansfont: "Noto Sans"
+monofont: "Source Code Pro"
+CJKmainfont: "Noto Serif CJK JP"
+CJKsansfont: "Noto Sans CJK JP"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = FALSE,
+                      echo = TRUE,
+                      fig.width = 2*80/25.4,
+                      fig.height = 2*80/25.4,
+                      out.width = "80%", 
+                      out.height = "70%",
+                      fig.align = "center", 
+                      warning = FALSE, 
+                      message = FALSE,
+                      error = FALSE, 
+                      autodep = TRUE)
+options(knitr.kable.NA = '', texi2dvi = "xetex")
+options(kableExtra.latex.load_packages = FALSE, tidyverse.quiet = TRUE)
+Sys.setlocale("LC_TIME", "en_US.UTF-8") # アメリカ英語に設定
+```
+
+# パッケージの読み込み
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(FactoMineR) # このパッケージでPCA，RDA解析ができます。
+library(factoextra)  
+```
+
+# データの読み込み
+
+
+```{r}
+d3 = read_xlsx("主成分分析_190924.xlsx", sheet = "Raw data_full year")
+d3 = d3 %>% drop_na() # 欠損値を外す
+```
+
+
+PCA はここであてはめる。
+
+```{r}
+d3out = PCA(d3, graph = FALSE)
+```
+
+
+PCA細かい情報はここで抽出します。まず，主成分に対する各要因の貢献度 (Contribution)。
+
+
+```{r}
+tmp1 = get_pca_var(d3out) %>% pluck("contrib") %>% 
+  as_tibble(rownames = "Variable") %>%
+  gather("Dim", "Contribution", -Variable)
+```
+
+つぎに，主成分に対する各要因の相関係数。
+
+```{r}
+tmp2 = get_pca_var(d3out) %>%  pluck("cor") %>% 
+  as_tibble(rownames = "Variable") %>%
+  gather("Dim", "Correlation", -Variable)
+```
+
+この２つの情報を結合して，貢献度の評価をします。N要因の貢献度が等しいとき，
+貢献度は $100 / N$ です。つまり，貢献度が $100/N$ 以上のとき，その要因が主成分に
+強く影響しています。
+
+```{r}
+d3_x = full_join(tmp1, tmp2) # 結合
+N = length(unique(tmp1$Variable)) # 要因の数
+```
+
+貢献度の評価はここで行います。
+```{r}
+d3_x = d3_x %>% 
+  mutate(C = ifelse(Contribution > 100 / N,
+                    "Above average contribution",
+                    "Below average contribution"))
+```
+
+さらに，主成分分析の図をつくるためのデータをもとめます。
+```{r}
+pcacoord = get_pca_var(d3out) %>%  
+  pluck("coord") %>% 
+  as_tibble(rownames = "Variable")
+pcacoord = pcacoord %>%
+  mutate(d1 = 1.1*sqrt(Dim.1^2 + Dim.2^2) * sin(atan2(Dim.1, Dim.2)),
+         d2 = 1.1*sqrt(Dim.1^2 + Dim.2^2) * cos(atan2(Dim.1, Dim.2)),
+         d3 = 1.1*sqrt(Dim.3^2 + Dim.4^2) * sin(atan2(Dim.3, Dim.4)),
+         d4 = 1.1*sqrt(Dim.3^2 + Dim.4^2) * cos(atan2(Dim.3, Dim.4)),
+         a1 = atan2(Dim.2, Dim.1),
+         a2 = atan2(Dim.4, Dim.3)) %>%
+  mutate(adj1 = ifelse(abs(a1) > pi/2, a1 - pi, a1),
+         adj2 = ifelse(abs(a2) > pi/2, a2 - pi, a2))
+```
+
+固有値があれば，主成分がどの程度全体の分散を説明しているかがわかります。
+```{r}
+eval = d3out %>% get_eig()
+```
+
+```{r, fig.cap = cap, fig.width = 4*80/25.4}
+cap = "主成分１に対すして，相関の高い順でならべた要因です。
+黒丸は貢献度が 100/14 を超えた要因です。
+主成分１に貢献する要因は８つあります。"
+d3_x %>% filter(str_detect(Dim, "Dim.1")) %>%
+  ggplot(aes(x = reorder(Variable, -Correlation), y = Correlation)) +
+  geom_line(aes(group = 1), linetype = "dotted") +
+  geom_point(aes(shape = C, fill = C), size = 3) +
+  geom_hline(yintercept= 0, linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Dimension 1", limits = c(-1,1)) +
+  scale_shape_manual(values = c(19, 21)) +
+  scale_fill_manual(values = c("black", "white")) +
+  theme(legend.background=element_blank(),
+        legend.position=c(1,1),
+        legend.justification=c(1,1),
+        legend.title=element_blank())
+```
+
+
+```{r, fig.cap = cap, fig.width = 4*80/25.4}
+cap = "主成分２に対すして，相関の高い順でならべた要因です。
+黒丸は貢献度が 100/14 を超えた要因です。
+主成分２に貢献する要因は５つあります。"
+d3_x %>% filter(str_detect(Dim, "Dim.2")) %>%
+  ggplot(aes(x = reorder(Variable, -Correlation), y = Correlation)) +
+  geom_line(aes(group = 1), linetype = "dotted") +
+  geom_point(aes(shape = C, fill = C), size = 3) +
+  geom_hline(yintercept= 0, linetype = "dashed") +
+    scale_x_discrete("") +
+  scale_y_continuous("Dimension 2", limits = c(-1,1)) +
+  scale_shape_manual(values = c(19, 21)) +
+  scale_fill_manual(values = c("black", "white")) +
+  theme(legend.background=element_blank(),
+        legend.position=c(1,1),
+        legend.justification=c(1,1),
+        legend.title=element_blank())
+```
+
+
+```{r, fig.cap = cap, fig.width = 4*80/25.4}
+cap = "主成分３に対すして，相関の高い順でならべた要因です。
+黒丸は貢献度が 100/14 を超えた要因です。
+主成分３に貢献する要因は３つあります。"
+d3_x %>% filter(str_detect(Dim, "Dim.3")) %>%
+  ggplot(aes(x = reorder(Variable, -Correlation), y = Correlation)) +
+  geom_line(aes(group = 1), linetype = "dotted") +
+  geom_point(aes(shape = C, fill = C), size = 3) +
+  geom_hline(yintercept= 0, linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Dimension 3", limits = c(-1,1)) +
+  scale_shape_manual(values = c(19, 21)) +
+  scale_fill_manual(values = c("black", "white")) +
+  theme(legend.background=element_blank(),
+        legend.position=c(1,1),
+        legend.justification=c(1,1),
+        legend.title=element_blank())
+```
+
+
+```{r, fig.cap = cap, fig.width = 4*80/25.4}
+cap = "主成分４に対すして，相関の高い順でならべた要因です。
+黒丸は貢献度が 100/14 を超えた要因です。
+主成分４に貢献する要因は３つあります。"
+d3_x %>% filter(str_detect(Dim, "Dim.4")) %>%
+  ggplot(aes(x = reorder(Variable, -Correlation), y = Correlation)) +
+  geom_line(aes(group = 1), linetype = "dotted") +
+  geom_point(aes(shape = C, fill = C), size = 3) +
+  geom_hline(yintercept= 0, linetype = "dashed") +
+  scale_x_discrete("") +
+  scale_y_continuous("Dimension 4", limits = c(-1,1)) +
+  scale_shape_manual(values = c(19, 21)) +
+  scale_fill_manual(values = c("black", "white")) +
+  theme(legend.background=element_blank(),
+        legend.position=c(1,1),
+        legend.justification=c(1,1),
+        legend.title=element_blank())
+```
+
+# 主成分分析の図
+
+主成分分析の図に，correlation circle を乗せるための関数です。
+
+```{r}
+circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
+  r = diameter / 2
+  tt <- seq(0,2*pi,length.out = npoints)
+  xx <- center[1] + r * cos(tt)
+  yy <- center[2] + r * sin(tt)
+  return(tibble(x = xx, y = yy))
+}
+```
+
+
+```{r, fig.cap = cap}
+cap = "The first principal component plane, ここで主成分１と２を座標軸にしています。
+矢印が円に近いほど，その要因がこの面に強く貢献している。つまり，矢印の長さが１のとき，
+円と重なり，その要因は他の主成分に貢献していない。
+矢印と矢印の間の角度のcos() をとれば，そのペアの相関係数を求められます。"
+
+xlab = str_glue("Dim. 1 ({round(eval[1,2], 1)}%)")
+ylab = str_glue("Dim. 2 ({round(eval[2,2], 1)}%)")
+ggplot(pcacoord) +
+  geom_vline(xintercept=0, linetype = "dashed") +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_segment(aes(x = 0, y = 0,
+                   xend = Dim.1, yend = Dim.2),
+               arrow=arrow(angle = 20, length = unit(5, "mm"), type="closed")) +
+  geom_text(aes(x = d1, y = d2, label = Variable,
+                angle = 360*adj1/(2*pi)),
+            hjust = 1,
+            data = pcacoord %>% filter(abs(pcacoord$a1) > pi/2)) +
+  geom_text(aes(x = d1, y = d2, label = Variable,
+                angle = 360*adj1/(2*pi)),
+            hjust = 0,
+            data = pcacoord %>% filter(abs(pcacoord$a1) < pi/2)) +
+  geom_path(aes(x = x, y = y),
+            data = circleFun(diameter = 2)) +
+  scale_x_continuous(xlab, limits = c(-1.2, 1.2)) +
+  scale_y_continuous(ylab, limits = c(-1.2, 1.2)) +
+  coord_equal()
+```
+
+
+```{r, fig.cap = cap}
+cap = "The third principal component plane, ここで主成分３と４を座標軸にしています。
+この面の場合，前リンだけ強く貢献しています。"
+
+xlab2 = str_glue("Dim. 3 ({round(eval[3,2], 1)}%)")
+ylab2 = str_glue("Dim. 4 ({round(eval[4,2], 1)}%)")
+ggplot(pcacoord) +
+  geom_vline(xintercept=0, linetype = "dashed") +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_segment(aes(x = 0, y = 0,
+                   xend = Dim.3, yend = Dim.4),
+               arrow=arrow(angle = 20, length = unit(5, "mm"), type="closed")) +
+  geom_text(aes(x = d3, y = d4, label = Variable,
+                angle = 360*adj2/(2*pi)),
+            hjust = 1,
+            data = pcacoord %>% filter(abs(pcacoord$a2) > pi/2)) +
+  geom_text(aes(x = d3, y = d4, label = Variable,
+                angle = 360*adj2/(2*pi)),
+            hjust = 0,
+            data = pcacoord %>% filter(abs(pcacoord$a2) < pi/2)) +
+  geom_path(aes(x = x, y = y),
+            data = circleFun(diameter = 2)) +
+  scale_x_continuous(xlab2, limits = c(-1.2, 1.2)) +
+  scale_y_continuous(ylab2, limits = c(-1.2, 1.2)) +
+  coord_equal()
+
+```
+
+```{r}
+cap = "主成分に対する各要因の修正分負荷量 (loading)。最初の５つの主成分だけ示しています。"
+get_pca(d3out) %>% pluck("coord") %>% as_tibble(rownames = "Variable") %>% 
+  arrange(desc(Dim.1)) %>% 
+  knitr::kable(format = "latex", 
+               booktabs = TRUE, digits=4,
+               linesep = "", caption=cap)
+```
+
+```{r}
+cap = "主成分に対する各要因の相関係数 (correlation)。最初の５つの主成分だけ示しています。"
+get_pca(d3out) %>% pluck("cor") %>% as_tibble(rownames = "Variable") %>% 
+  arrange(desc(Dim.1)) %>% 
+  knitr::kable(format = "latex", 
+               booktabs = TRUE, digits=4,
+               linesep = "", caption=cap)
+```
+
+```{r}
+cap = "主成分に対する各要因の貢献度 (contribution)。最初の５つの主成分だけ示しています。列の和は１００です。要因が同等に貢献している場合，貢献度は100 / 14 = 7.14 です。"
+get_pca(d3out) %>% pluck("contrib") %>% as_tibble(rownames = "Variable") %>% 
+  arrange(desc(Dim.1)) %>% 
+  knitr::kable(format = "latex", 
+               booktabs = TRUE, digits=4,
+               linesep = "", caption=cap)
+
+
+```
+
