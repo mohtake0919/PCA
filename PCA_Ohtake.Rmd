@@ -2,7 +2,7 @@
 title: "PCA_Thesis 2"
 author: "Ohtake"
 date: "2019年9月25日"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
